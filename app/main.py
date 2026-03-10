@@ -1,0 +1,124 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+import logging
+
+from app.config import settings
+from app.database import engine, Base
+from app.routers.auth import router as auth_router
+from app.routers.profile import router as profile_router
+from app.routers.community import router as community_router
+from app.routers.post import router as post_router
+from app.routers.follow import router as follow_router
+from app.routers.trip import router as trip_router
+from app.routers.match import router as match_router
+from app.routers.chat import router as chat_router
+from app.routers.itinerary import router as itinerary_router
+from app.routers.explore import router as explore_router
+from app.routers.notification import router as notification_router
+from app.routers.upload import router as upload_router
+from app.routers.saved import router as saved_router
+from app.routers.trip_social import router as trip_social_router
+from app.routers.kyc import router as kyc_router
+from app.routers.review import router as review_router
+
+from app.models.message import Message, Conversation
+from app.models.itinerary import Itinerary, ItineraryMessage
+from app.models.comment import Comment
+from app.models.trip import Trip
+from app.models.review import Review
+
+# Auto-create tables on startup (use Alembic migrations for production)
+Base.metadata.create_all(bind=engine)
+
+# Ensure upload directory exists before static mount
+os.makedirs("uploads", exist_ok=True)
+
+app = FastAPI(
+    title="🌍 Wandr — Auth & Identity API",
+    description="""
+## Wandr — Pillar 1: Authentication & User Identity
+
+The foundation of the **Wandr** travel community platform.
+
+### Endpoints
+| Route | Method | Auth | Description |
+|---|---|---|---|
+| `/auth/signup` | POST | Public | Register new account |
+| `/auth/login` | POST | Public | Login, get JWT token |
+| `/profile/me` | GET | 🔒 Bearer | Get own profile |
+| `/profile/me` | PUT | 🔒 Bearer | Update profile |
+| `/profile/me/interests` | POST | 🔒 Bearer | Save travel interests (onboarding) |
+| `/community/users` | GET | 🔒 Bearer | Find matching users by interest |
+| `/posts` | POST | 🔒 Bearer | Create a new post |
+| `/feed` | GET | 🔒 Bearer | View chronologically ordered feed limit/offset |
+| `/follow/{uid}` | POST/DEL | 🔒 Bearer | Follow or unfollow a user |
+| `/followers/{uid}` | GET | 🔒 Bearer | Get users following a user |
+| `/following/{uid}` | GET | 🔒 Bearer | Get users a user is following |
+
+### Auth Flow
+1. **Signup** → get user object
+2. **Login** → get `access_token`
+3. All protected routes → `Authorization: Bearer <token>`
+    """,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# ── CORS ───────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # Restrict to frontend URL in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    logging.error(f"====== KYC Validation Error ======\nBody: {await request.body()}\nErrors: {exc.errors()}\n===============================")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+
+
+# ── Static File Hosting ────────────────────────────────────────────────
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# ── Routers ────────────────────────────────────────────────────────────
+app.include_router(auth_router, prefix="/api")
+app.include_router(profile_router, prefix="/api")
+app.include_router(community_router, prefix="/api")
+app.include_router(post_router, prefix="/api")
+app.include_router(follow_router, prefix="/api")
+app.include_router(trip_router, prefix="/api")
+app.include_router(match_router, prefix="/api/match")
+app.include_router(chat_router, prefix="/api/chat")
+app.include_router(itinerary_router, prefix="/api/itinerary")
+app.include_router(explore_router, prefix="/api")
+app.include_router(notification_router, prefix="/api")
+app.include_router(upload_router, prefix="/api")
+app.include_router(saved_router, prefix="/api")
+app.include_router(trip_social_router, prefix="/api")
+app.include_router(kyc_router, prefix="/api")
+app.include_router(review_router, prefix="/api")
+
+
+@app.get("/", tags=["Health"])
+def root():
+    return {
+        "app": settings.APP_NAME,
+        "pillar": "1 — Auth & Identity",
+        "status": "running",
+        "docs": "/docs",
+    }
+
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "ok"}

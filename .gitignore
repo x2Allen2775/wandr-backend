@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.env
+.venv/
+venv/
+ENV/
+env/
+# Flutter (ignore frontend here since we only deploy backend)
+wandr_app/
+# Mac
+.DS_Store
+# DB
+*.sqlite3
+*.db
+# Logs
+*.log
