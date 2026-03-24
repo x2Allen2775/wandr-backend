@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Form, HTTPException
+from fastapi import APIRouter, Depends, status, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -18,6 +18,8 @@ from app.utils.jwt import get_current_user
 from app.config import settings
 import random
 
+from app.utils.rate_limit import limiter
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -27,7 +29,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     status_code=status.HTTP_201_CREATED,
     summary="Register a new Wandr account",
 )
-def signup(payload: UserSignup, db: Session = Depends(get_db)):
+@limiter.limit("5/10minute")
+def signup(request: Request, payload: UserSignup, db: Session = Depends(get_db)):
     """
     Create a new user account.
 
@@ -44,7 +47,8 @@ def signup(payload: UserSignup, db: Session = Depends(get_db)):
     response_model=TokenResponse,
     summary="Login and receive a JWT token",
 )
-def login(payload: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/10minute")
+def login(request: Request, payload: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Authenticate with email + password (OAuth2 Form Flow).
 
@@ -60,7 +64,8 @@ def login(payload: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(
     response_model=TokenResponse,
     summary="Login and see JWT token in response body (JSON)",
 )
-def login_json(payload: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/10minute")
+def login_json(request: Request, payload: UserLogin, db: Session = Depends(get_db)):
     """
     Authenticate with JSON email + password.
 
@@ -75,7 +80,8 @@ def login_json(payload: UserLogin, db: Session = Depends(get_db)):
 # ── Password Reset Flow ────────────────────────────────────────
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(email: str = Form(...), db: Session = Depends(get_db)):
+@limiter.limit("3/10minute")
+def forgot_password(request: Request, email: str = Form(...), db: Session = Depends(get_db)):
     """
     Trigger a password reset email to the user.
     """
@@ -212,7 +218,9 @@ def send_verification_code(
     db.add(entry)
     db.commit()
     
-    send_verification_email(current_user.email, code)
+    if not send_verification_email(current_user.email, code):
+        # Prevent silent failure where user is locked waiting for a code that never sent
+        raise HTTPException(status_code=500, detail="Failed to dispatch verification email. Please try again later.")
     
     # In development, include the code in the response for convenience
     if settings.APP_ENV == "development":
@@ -277,7 +285,9 @@ def send_password_change_code(
     db.add(entry)
     db.commit()
     
-    send_otp_email(current_user.email, code, "password change")
+    if not send_otp_email(current_user.email, code, "password change"):
+        # Prevent silent failure
+        raise HTTPException(status_code=500, detail="Failed to dispatch OTP email. Please try again later.")
     
     if settings.APP_ENV == "development":
         return {"message": f"Password change code sent! (Dev code: {code})"}

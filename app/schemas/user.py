@@ -57,6 +57,7 @@ class ProfileUpdate(BaseModel):
     budget_preference: Optional[str] = None
     languages: Optional[List[str]] = None
     is_public: Optional[bool] = None
+    public_key: Optional[str] = None
 
 
 # ── Profile Response (what API returns) ────────────────────────────
@@ -77,6 +78,7 @@ class UserProfile(BaseModel):
     kyc_status: str
     is_verified: bool
     is_public: bool
+    public_key: Optional[str] = None
     following_count: int = 0
     followers_count: int = 0
     created_at: datetime

@@ -33,7 +33,8 @@ class Message(Base):
     sender_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     receiver_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     
-    content = Column(Text, nullable=True) # Text content. Nullable if only sending media
+    content = Column(Text, nullable=True) # Ciphertext payload (Base64 AES-GCM)
+    iv = Column(String, nullable=True) # Initialization Vector (Base64)
     media_url = Column(String, nullable=True) # Optional URL for attached images
     
     is_read = Column(Boolean, default=False)

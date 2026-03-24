@@ -59,6 +59,7 @@ class User(Base):
     languages = Column(Text, nullable=True)                  # JSON string list
 
     # ── Future-proofing ────────────────────────────────────────
+    public_key = Column(String, nullable=True)               # ECDH P-256 public key for E2E Encrypted Chat (Base64 length ~90)
     kyc_status = Column(String, default="unverified")        # unverified | pending | verified | rejected
     kyc_reference_token = Column(String, nullable=True)      # vendor transaction id
     kyc_document_url = Column(String, nullable=True)         # URL to uploaded KYC document (temporary)

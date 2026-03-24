@@ -68,6 +68,7 @@ def send_message(
         sender_id=current_user.id,
         receiver_id=receiver_id,
         content=payload.content,
+        iv=payload.iv,
         media_url=payload.media_url
     )
     db.add(new_message)

@@ -58,6 +58,11 @@ def create_review(
     if not reviewer_member or not reviewee_member:
         raise HTTPException(status_code=403, detail="Both users must be members of the trip to review each other")
 
+    # Lock the reviewee user row first to prevent race conditions on score aggregation
+    reviewee = db.query(User).filter(cast(User.id, String) == reviewee_id).with_for_update().first()
+    if not reviewee:
+        raise HTTPException(status_code=404, detail="User to review not found")
+
     # Check if review already exists
     existing = db.query(Review).filter(
         cast(Review.trip_id, String) == trip_id,
@@ -66,6 +71,7 @@ def create_review(
     ).first()
     
     if existing:
+        db.rollback() # Release the row lock early
         raise HTTPException(status_code=400, detail="You have already reviewed this user for this trip")
 
     # Create Review
@@ -77,21 +83,19 @@ def create_review(
         text_review=payload.text_review
     )
     db.add(new_review)
+    db.flush() # Flush to DB so the len(all_reviews) catches it
     
     # Recalculate reviewee's trust score
-    reviewee = db.query(User).filter(User.id == reviewee_id).first()
-    if reviewee:
-        # All reviews including the one just added (due to auto-flush)
-        all_reviews = db.query(Review).filter(cast(Review.reviewee_id, String) == reviewee_id).all()
+    all_reviews = db.query(Review).filter(cast(Review.reviewee_id, String) == reviewee_id).all()
         
-        total_score = sum(r.rating for r in all_reviews)
-        new_count = len(all_reviews)
+    total_score = sum(r.rating for r in all_reviews)
+    new_count = len(all_reviews)
         
-        reviewee.trust_score = round(total_score / new_count, 1) if new_count > 0 else 5.0
-        reviewee.review_count = new_count
+    reviewee.trust_score = round(total_score / new_count, 1) if new_count > 0 else 5.0
+    reviewee.review_count = new_count
 
     db.commit()
-    return {"message": "Review submitted successfully", "trust_score": reviewee.trust_score if reviewee else None}
+    return {"message": "Review submitted successfully", "trust_score": reviewee.trust_score}
 
 @router.get("/user/{user_id}", response_model=List[ReviewResponse])
 def get_user_reviews(

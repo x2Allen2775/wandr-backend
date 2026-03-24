@@ -1,10 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import logging
+
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from app.utils.rate_limit import limiter
 
 from app.config import settings
 from app.database import engine, Base
@@ -69,6 +74,9 @@ The foundation of the **Wandr** travel community platform.
     redoc_url="/redoc",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # ── CORS ───────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
@@ -84,6 +92,15 @@ async def validation_exception_handler(request, exc):
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors()},
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    logging.error(f"====== FATAL UNHANDLED EXCEPTION ======\nPath: {request.url.path}\nMethod: {request.method}\nTraceback: {traceback.format_exc()}\n=======================================")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."},
     )
 
 

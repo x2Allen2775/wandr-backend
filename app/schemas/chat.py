@@ -5,6 +5,7 @@ from app.schemas.post import PostAuthorResponse
 
 class MessageCreate(BaseModel):
     content: Optional[str] = None
+    iv: Optional[str] = None
     media_url: Optional[str] = None
 
 class MessageResponse(BaseModel):
@@ -13,6 +14,7 @@ class MessageResponse(BaseModel):
     sender_id: str
     receiver_id: str
     content: Optional[str] = None
+    iv: Optional[str] = None
     media_url: Optional[str] = None
     is_read: bool
     timestamp: datetime
