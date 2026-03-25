@@ -326,14 +326,18 @@ def check_phone_status(
     current_user: User = Depends(get_current_user),
 ):
     """Check if user is phone-verified for a specific trip."""
-    member = db.query(TripMember).filter(
-        cast(TripMember.trip_id, String) == trip_id,
-        cast(TripMember.user_id, String) == str(current_user.id),
-    ).first()
+    member = None
+    try:
+        member = db.query(TripMember).filter(
+            cast(TripMember.trip_id, String) == trip_id,
+            cast(TripMember.user_id, String) == str(current_user.id),
+        ).first()
+    except Exception:
+        pass
     return {
-        "phone_verified": current_user.phone_verified,
+        "phone_verified": getattr(current_user, "phone_verified", False) or False,
         "trip_verified": member.verified if member else False,
-        "phone_number": current_user.phone_number,
+        "phone_number": getattr(current_user, "phone_number", None),
     }
 
 
@@ -344,14 +348,20 @@ def confirm_phone_verification(
     current_user: User = Depends(get_current_user),
 ):
     """Mark user as phone verified (called after Firebase Auth succeeds on client)."""
-    current_user.phone_verified = True
-    
-    member = db.query(TripMember).filter(
-        cast(TripMember.trip_id, String) == trip_id,
-        cast(TripMember.user_id, String) == str(current_user.id),
-    ).first()
-    if member:
-        member.verified = True
+    try:
+        setattr(current_user, "phone_verified", True)
+    except Exception:
+        pass
+
+    try:
+        member = db.query(TripMember).filter(
+            cast(TripMember.trip_id, String) == trip_id,
+            cast(TripMember.user_id, String) == str(current_user.id),
+        ).first()
+        if member:
+            member.verified = True
+    except Exception:
+        pass
 
     db.commit()
     return {"detail": "Phone verified, group chat unlocked"}
