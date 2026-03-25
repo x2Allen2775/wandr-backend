@@ -39,6 +39,40 @@ from app.models.review import Review
 # Auto-create tables on startup (use Alembic migrations for production)
 Base.metadata.create_all(bind=engine)
 
+# ── Auto-migration: safely add missing columns to existing tables ──────
+def _auto_migrate():
+    """Add columns that may be missing from an older DB schema."""
+    from sqlalchemy import text, inspect
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+        existing_cols = {c["name"] for c in inspector.get_columns("users")}
+        migrations = {
+            "phone_number": "VARCHAR",
+            "phone_verified": "BOOLEAN DEFAULT FALSE",
+            "social_google_email": "VARCHAR",
+            "legal_name": "VARCHAR",
+            "dob": "TIMESTAMP",
+            "kyc_verified_at": "TIMESTAMP",
+            "kyc_reference_token": "VARCHAR",
+            "trust_score": "FLOAT DEFAULT 5.0",
+            "review_count": "INTEGER DEFAULT 0",
+            "public_key": "VARCHAR",
+        }
+        for col_name, col_type in migrations.items():
+            if col_name not in existing_cols:
+                try:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                    logging.info(f"Auto-migrated column: users.{col_name}")
+                except Exception as e:
+                    logging.warning(f"Column migration skipped ({col_name}): {e}")
+        conn.commit()
+
+try:
+    _auto_migrate()
+    logging.info("Auto-migration complete.")
+except Exception as e:
+    logging.warning(f"Auto-migration skipped: {e}")
+
 # Ensure upload directory exists before static mount
 os.makedirs("uploads", exist_ok=True)
 
