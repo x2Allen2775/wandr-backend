@@ -54,12 +54,17 @@ def get_kyc_status(
         expiry = current_user.kyc_verified_at + timedelta(days=KYC_VALIDITY_DAYS)
         days_remaining = max(0, (expiry - datetime.now(timezone.utc)).days)
 
+    from app.models.emergency_contact import EmergencyContact
+    has_emergency = db.query(EmergencyContact).filter(cast(EmergencyContact.user_id, String) == current_user.id).first() is not None
+
     return {
         "kyc_status": current_user.kyc_status,
         "kyc_verified_at": str(current_user.kyc_verified_at) if current_user.kyc_verified_at else None,
         "is_expired": is_expired,
         "days_remaining": days_remaining,
         "legal_name": current_user.legal_name,
+        "has_google_auth": bool(current_user.social_google_email),
+        "has_emergency_contact": has_emergency,
     }
 
 

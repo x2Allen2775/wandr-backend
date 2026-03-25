@@ -78,6 +78,8 @@ class UserProfile(BaseModel):
     kyc_status: str
     is_verified: bool
     is_public: bool
+    has_google_auth: bool = False
+    has_emergency_contact: bool = False
     public_key: Optional[str] = None
     following_count: int = 0
     followers_count: int = 0

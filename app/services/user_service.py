@@ -115,4 +115,6 @@ def _deserialize_user(user: User) -> User:
                 pass
                 
     user.countries_visited = list(countries_set)
+    user.has_google_auth = bool(user.social_google_email)
+    user.has_emergency_contact = getattr(user, "emergency_contact", None) is not None
     return user
