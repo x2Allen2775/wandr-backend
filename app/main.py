@@ -35,6 +35,15 @@ from app.models.itinerary import Itinerary, ItineraryMessage
 from app.models.comment import Comment
 from app.models.trip import Trip
 from app.models.review import Review
+# Import ALL models so create_all creates every table on cold start
+from app.models.user import User
+from app.models.post import Post
+from app.models.interest import Interest
+from app.models.notification import Notification
+from app.models.saved_post import SavedPost
+from app.models.trip_member import TripMember
+from app.models.consent import UserConsent
+from app.models.emergency_contact import EmergencyContact
 
 # Auto-create tables on startup (use Alembic migrations for production)
 Base.metadata.create_all(bind=engine)

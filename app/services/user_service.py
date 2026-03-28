@@ -104,17 +104,19 @@ def _deserialize_user(user: User) -> User:
             setattr(user, field, [])
             
     # Dynamically inject past completed trips into countries_visited
-    countries_set = set(user.countries_visited)
-    for trip in user.trips:
-        if trip.status == "completed" and trip.countries:
-            try:
-                trip_countries = json.loads(trip.countries)
-                for country in trip_countries:
-                    countries_set.add(country)
-            except Exception:
-                pass
-                
-    user.countries_visited = list(countries_set)
+    try:
+        countries_set = set(user.countries_visited)
+        for trip in (user.trips or []):
+            if trip.status == "completed" and trip.countries:
+                try:
+                    trip_countries = json.loads(trip.countries)
+                    for country in trip_countries:
+                        countries_set.add(country)
+                except Exception:
+                    pass
+        user.countries_visited = list(countries_set)
+    except Exception:
+        pass
 
     # Inject verification flags — safe for DBs that may not have these columns yet
     try:
