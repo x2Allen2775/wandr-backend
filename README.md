@@ -1,161 +1,120 @@
-# 🌍 Wandr — Pillar 1: Auth & Identity System
+# 🌍 WANDR — The Social Network for Modern Explorers
 
-> The bedrock of the Wandr travel community platform. If users can't sign up and log in securely, nothing else works.
+**WANDR** is a production-ready travel platform designed to connect verified travellers through interest-based matching, secure community trips, and a robust identity-first social feed.
+
+---
+
+## 🏗️ Tech Stack
+
+### **Backend (API)**
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python 3.10+)
+- **Database**: PostgreSQL (Production) / SQLite (Local Dev)
+- **ORM**: SQLAlchemy 2.0
+- **Security**: JWT Authentication, bcrypt hashing, `slowapi` rate limiting
+- **Compliance**: DPDP (Digital Personal Data Protection) compliant KYC pipeline
+- **Hosting**: Render (Web Service)
+
+### **Frontend (Mobile & Web)**
+- **Framework**: [Flutter](https://flutter.dev/) (Dart)
+- **State Management**: Provider / Riverpod
+- **Authentication**: Firebase Auth (Phone/OTP)
+- **Identity**: Google OAuth Integration
+- **Hosting**: Firebase Hosting (Web)
+
+---
+
+## ✨ Key Features
+
+### **🔐 Tri-Level Trust & Safety (KYC)**
+WANDR implements a strict "Verified Only" policy for high-risk social interactions:
+1. **Lvl 1: Government Identity** — OCR & Selfie matching (Simulated via HyperVerge/Digilocker patterns).
+2. **Lvl 2: Social Proof** — Mandatory Google Account linking to prevent bot farms.
+3. **Lvl 3: Accountability** — Emergency Contact verification.
+
+### **📍 Smart Trip Matching**
+- Join "Open to Join" trips created by verified members.
+- Automatic location-based discovery.
+- Interest-based compatibility filtering (Solo, Budget, Luxury, etc.).
+
+### **💬 Secure Community Chat**
+- Group chats automatically unlocked upon trip acceptance.
+- Mandatory phone verification (Firebase OTP) for chat access to ensure real-world accountability.
+
+### **📸 Explorers Feed**
+- High-performance social feed with media uploads.
+- Nested commenting system.
+- Travel-style tagging and interest-based recommendations.
 
 ---
 
 ## 📁 Project Structure
 
-```
-wandr-auth/
-├── app/
-│   ├── main.py              ← FastAPI app, CORS, router registration
-│   ├── config.py            ← Environment settings via pydantic
-│   ├── database.py          ← SQLAlchemy engine, session, Base
-│   ├── models/
-│   │   └── user.py          ← User DB model (future-proofed with KYC fields)
-│   ├── schemas/
-│   │   └── user.py          ← Pydantic request/response schemas
-│   ├── routers/
-│   │   ├── auth.py          ← /auth/signup, /auth/login
-│   │   └── profile.py       ← /profile/me (GET, PUT, interests)
-│   ├── services/
-│   │   ├── auth_service.py  ← Signup/login business logic
-│   │   └── user_service.py  ← Profile update, interests, deserialization
-│   └── utils/
-│       ├── hashing.py       ← bcrypt password hash/verify
-│       └── jwt.py           ← JWT create/decode + auth dependency
-├── .env.example             ← Copy to .env and fill in values
-├── requirements.txt
-└── README.md
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Clone & setup environment
-
 ```bash
-cd wandr-auth
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env — set your DATABASE_URL and SECRET_KEY
-```
-
-### 3. Run the server
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Visit **http://localhost:8000/docs** for the interactive Swagger UI.
-
----
-
-## 🗄️ Database Options
-
-### SQLite (quick local dev — zero setup)
-```env
-DATABASE_URL=sqlite:///./wandr.db
-```
-
-### PostgreSQL (recommended for production)
-```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/wandr_db
-```
-Create the DB first:
-```sql
-CREATE DATABASE wandr_db;
+wandr/
+├── app/                  # FastAPI Backend source
+│   ├── models/           # SQLAlchemy DB Models (User, Trip, Post, etc.)
+│   ├── routers/          # API Endpoints (Auth, KYC, Trips, Social)
+│   ├── services/         # Business Logic (Auth, User, Post services)
+│   ├── schemas/          # Pydantic Request/Response models
+│   ├── utils/            # JWT, Hashing, Rate Limiting
+│   └── main.py          # App Entry point & Auto-migration engine
+├── wandr_app/            # Flutter Frontend source
+│   ├── lib/
+│   │   ├── screens/      # UI Views (Login, Feed, KYC, Trips)
+│   │   ├── services/     # API Clients & Firebase Logic
+│   │   ├── models/       # Frontend Data Classes
+│   │   └── widgets/      # Reusable UI Components
+│   └── pubspec.yaml      # Flutter dependencies
+├── requirements.txt      # Backend dependencies
+└── README.md             # You are here
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🚀 Installation & Setup
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| `POST` | `/auth/signup` | Public | Register new account |
-| `POST` | `/auth/login` | Public | Login, receive JWT token |
-| `GET` | `/profile/me` | 🔒 Bearer | Fetch own profile |
-| `PUT` | `/profile/me` | 🔒 Bearer | Update profile fields |
-| `POST` | `/profile/me/interests` | 🔒 Bearer | Save travel interests (onboarding) |
+### **Backend Setup**
+1. **Navigate to root** and create a virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+2. **Configure `.env`**:
+   ```env
+   DATABASE_URL=postgresql://user:pass@localhost:5432/wandr
+   SECRET_KEY=your_super_secret_jwt_key
+   ```
+3. **Run Dev Server**:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
----
-
-## 🧪 Sample Requests
-
-### Signup
-```bash
-curl -X POST http://localhost:8000/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alex@wandr.io","username":"alex_travels","password":"Secure123","full_name":"Alex"}'
-```
-
-### Login
-```bash
-curl -X POST http://localhost:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alex@wandr.io","password":"Secure123"}'
-```
-
-### Get Profile (protected)
-```bash
-curl http://localhost:8000/profile/me \
-  -H "Authorization: Bearer <your_token_here>"
-```
-
-### Set Travel Interests (onboarding)
-```bash
-curl -X POST http://localhost:8000/profile/me/interests \
-  -H "Authorization: Bearer <your_token_here>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "travel_interests": ["solo", "beaches", "mountains", "backpacking"],
-    "travel_style": "budget",
-    "languages": ["English", "Hindi"],
-    "location": "Mumbai, India"
-  }'
-```
+### **Frontend Setup**
+1. **Navigate to `wandr_app`**:
+   ```bash
+   cd wandr_app
+   flutter pub get
+   ```
+2. **Run on Device/Web**:
+   ```bash
+   flutter run -d chrome  # For Web
+   flutter run            # For Mobile (iOS/Android)
+   ```
 
 ---
 
-## 🔐 Security
-
-| Feature | Implementation |
-|---------|---------------|
-| Password hashing | `bcrypt` via `passlib` |
-| Authentication | `JWT` via `python-jose` |
-| Token expiry | Configurable (default: 60 min) |
-| Protected routes | `Depends(get_current_user)` |
-| Input validation | Pydantic v2 validators |
+## 🛡️ Security & Compliance
+- **Zero-Storage Media Logic**: In-memory processing for KYC selfies (DPDP compliance).
+- **Graceful Degradation**: Backend is built with "Crash-Proof" logic to handle intermittent DB connectivity or missing production columns during migrations.
+- **Rate Limiting**: Protection against brute-force attacks on Auth and OTP endpoints.
 
 ---
 
-## 🔮 Future-Proofing (Already in the DB)
-
-- `kyc_status` field: `not_submitted → pending → verified`
-- `kyc_document_ref` field: encrypted document reference
-- `is_verified` flag for email verification
-- UUID primary keys (ready for distributed systems)
+## 🌐 Current Deployments
+- **API (Production)**: [https://wandr-api.onrender.com](https://wandr-api.onrender.com)
+- **Status Page**: `/health` returns `{"status": "ok"}`
 
 ---
 
-## 🧩 What's Next (Pillar 2 Preview)
-
-> Once users exist, we build the social layer:
-> - Posts, Stories, Reels
-> - Follow / Unfollow
-> - Feed algorithm (interest-based)
-> - Trip planning & community groups
-
----
-
-*Built with ❤️ for Wandr — the social platform for travellers.*
+*Built with ❤️ for the global travel community.*
