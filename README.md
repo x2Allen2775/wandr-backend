@@ -112,7 +112,7 @@ wandr/
 ---
 
 ## 🌐 Current Deployments
-- **API (Production)**: [https://wandr-api.onrender.com](https://wandr-api.onrender.com)
+- **API (Production)**: (https://wandr-c75a5.web.app/)
 - **Status Page**: `/health` returns `{"status": "ok"}`
 
 ---
