@@ -12,6 +12,18 @@ except ImportError:
 
 router = APIRouter(tags=["Media Uploads"])
 
+@router.get("/env-debug")
+def env_debug():
+    from app.config import settings
+    import os
+    return {
+        "pydantic_cloud": settings.CLOUDINARY_CLOUD_NAME,
+        "pydantic_key": settings.CLOUDINARY_API_KEY,
+        "pydantic_secret": "***" if settings.CLOUDINARY_API_SECRET else None,
+        "os_cloud": os.environ.get("CLOUDINARY_CLOUD_NAME"),
+        "os_key": os.environ.get("CLOUDINARY_API_KEY")
+    }
+
 UPLOAD_DIR = "uploads"
 
 # Ensure upload directory exists
