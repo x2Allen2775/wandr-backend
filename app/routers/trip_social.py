@@ -72,11 +72,13 @@ def request_to_join(
 
     existing = db.query(TripJoinRequest).filter(
         TripJoinRequest.trip_id == trip_id,
-        TripJoinRequest.sender_id == str(current_user.id),
-        TripJoinRequest.status == "pending"
+        TripJoinRequest.sender_id == str(current_user.id)
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Request already sent")
+        if existing.status == "pending":
+            raise HTTPException(status_code=400, detail="Request already sent")
+        elif existing.status == "declined":
+            raise HTTPException(status_code=403, detail="Your request to join this trip was previously declined")
 
     # Check if already a member
     is_member = db.query(TripMember).filter(
@@ -246,6 +248,54 @@ def get_joined_trips(
     return results
 
 
+@router.delete("/{trip_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_trip(
+    trip_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Leave a trip you have joined."""
+    member = db.query(TripMember).filter(
+        TripMember.trip_id == trip_id,
+        TripMember.user_id == str(current_user.id)
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="You are not a member of this trip")
+    if member.role == "owner":
+        raise HTTPException(status_code=400, detail="The owner cannot leave the trip. Delete the trip instead.")
+        
+    db.delete(member)
+    db.commit()
+    return None
+
+@router.delete("/{trip_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def kick_trip_member(
+    trip_id: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Kick a user from a trip (owner only)."""
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip or str(trip.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not the trip owner")
+        
+    if str(user_id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="You cannot kick yourself.")
+
+    member = db.query(TripMember).filter(
+        TripMember.trip_id == trip_id,
+        TripMember.user_id == user_id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="User is not a member of this trip")
+        
+    db.delete(member)
+    db.commit()
+    return None
+
 # ─── Group Messages ───────────────────────────────────────
 
 @router.get("/{trip_id}/messages", response_model=List[GroupMessageResponse])
@@ -261,6 +311,8 @@ def get_group_messages(
     ).first()
     if not is_member:
         raise HTTPException(status_code=403, detail="You are not a member of this trip")
+    if not is_member.verified:
+        raise HTTPException(status_code=403, detail="Phone verification required to read messages")
 
     messages = db.query(GroupMessage).filter(
         cast(GroupMessage.trip_id, String) == trip_id

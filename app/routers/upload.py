@@ -30,7 +30,17 @@ async def upload_media(request: Request, files: List[UploadFile] = File(...)):
     uploaded_urls = []
 
     for file in files:
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail=f"Invalid file type for {file.filename}. Only images are allowed.")
+
+        if hasattr(file, "size") and file.size is not None:
+            if file.size > 10 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail=f"File {file.filename} is too large. Limit is 10MB.")
+
+        # Read into memory safely assuming size is valid or checking length
         file_content = await file.read()
+        if len(file_content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail=f"File {file.filename} is too large. Limit is 10MB.")
         
         # Determine if we can use Cloudinary
         from app.config import settings

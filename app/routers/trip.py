@@ -106,3 +106,35 @@ def review_trip(
             
     db.commit()
     return {"message": "Review appended to passport successfully"}
+
+@router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_trip(
+    trip_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a trip entirely (Owner only).
+    Cascades down wiping members, chat history, and requests to preserve database hygiene.
+    """
+    from app.models.trip import Trip
+    from app.models.trip_member import TripMember, TripJoinRequest, GroupMessage
+    from sqlalchemy import cast, String
+
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if str(trip.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this trip.")
+
+    # Manual cascade delete for associated tables
+    db.query(GroupMessage).filter(cast(GroupMessage.trip_id, String) == trip_id).delete(synchronize_session=False)
+    db.query(TripJoinRequest).filter(cast(TripJoinRequest.trip_id, String) == trip_id).delete(synchronize_session=False)
+    db.query(TripMember).filter(cast(TripMember.trip_id, String) == trip_id).delete(synchronize_session=False)
+
+    # Delete the trip itself
+    db.delete(trip)
+    db.commit()
+
+    return None

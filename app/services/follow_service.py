@@ -66,13 +66,13 @@ def get_followers(user_id: str, db: Session, limit: int = 50, offset: int = 0) -
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
     
-    # Needs to handle the Appended Lazy collection
-    return target_user.followers[offset : offset + limit]
+    # Use SQLAlchemy query methods on the dynamic relationship
+    return target_user.followers.limit(limit).offset(offset).all()
 
 def get_following(user_id: str, db: Session, limit: int = 50, offset: int = 0) -> list[User]:
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
     
-    # Needs to handle the Appended Lazy collection
+    # Use SQLAlchemy query methods on the dynamic relationship
     return target_user.following.limit(limit).offset(offset).all()
