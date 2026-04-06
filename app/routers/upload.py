@@ -46,27 +46,20 @@ async def upload_media(request: Request, files: List[UploadFile] = File(...)):
         from app.config import settings
         use_cloudinary = bool(settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET)
 
-        if use_cloudinary and cloudinary:
-            try:
-                # Upload to Cloudinary
-                response = cloudinary.uploader.upload(file_content)
-                uploaded_urls.append(response.get("secure_url"))
-            except Exception as e:
-                logging.error(f"Cloudinary upload failed: {e}")
-                raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {str(e)}")
-        else:
-            # Fallback to Local Storage
-            ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-            unique_filename = f"{uuid.uuid4().hex}.{ext}"
-            file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        if not use_cloudinary:
+            raise HTTPException(status_code=500, detail="Cloudinary credentials missing in Render environment variables.")
+            
+        if cloudinary is None:
+            raise HTTPException(status_code=500, detail="Cloudinary Python package failed to import on Render.")
 
-            try:
-                with open(file_path, "wb") as buffer:
-                    buffer.write(file_content)
-                
-                file_url = f"{base_url}/uploads/{unique_filename}"
-                uploaded_urls.append(file_url)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to upload locally: {str(e)}")
+        try:
+            # We must use file.file (SpooledTemporaryFile) for Cloudinary, not raw bytes (file_content)
+            # Some versions of Python Cloudinary SDK fail silently or raise errors with raw bytes
+            file.file.seek(0)
+            response = cloudinary.uploader.upload(file.file)
+            uploaded_urls.append(response.get("secure_url"))
+        except Exception as e:
+            logging.error(f"Cloudinary upload failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {str(e)}")
 
     return {"media_urls": uploaded_urls}
