@@ -13,6 +13,22 @@ from app.utils.rate_limit import limiter
 
 from app.config import settings
 from app.database import engine, Base
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+# Initialize Cloudinary if credentials are provided
+if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET:
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+        secure=True
+    )
+    logging.info("Cloudinary successfully configured.")
+else:
+    logging.warning("Cloudinary credentials missing. Falling back to local/ephemeral storage.")
+
 from app.routers.auth import router as auth_router
 from app.routers.profile import router as profile_router
 from app.routers.community import router as community_router

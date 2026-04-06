@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     APP_NAME: str = "Wandr"
     APP_ENV: str = "development"
     SENDGRID_API_KEY: str | None = None
-
+    
+    # Cloudinary Integration for Media Uploads
+    CLOUDINARY_CLOUD_NAME: str | None = None
+    CLOUDINARY_API_KEY: str | None = None
+    CLOUDINARY_API_SECRET: str | None = None
     class Config:
         env_file = ".env"
 
